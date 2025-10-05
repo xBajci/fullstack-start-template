@@ -149,7 +149,7 @@ const techStack = [
   },
 ];
 
-export default function LandingPage() {
+function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (

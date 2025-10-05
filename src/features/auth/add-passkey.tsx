@@ -33,9 +33,9 @@ export function AddPasskey() {
       onChange: ({ value }) => {
         const result = addPasskeySchema.safeParse(value);
         if (!result.success) {
-          return result.error.formErrors.fieldErrors;
+          return result.error.issues;
         }
-        return undefined;
+        return;
       },
     },
     onSubmit: async ({ value }) => {
@@ -56,9 +56,9 @@ export function AddPasskey() {
     },
   });
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog onOpenChange={setIsOpen} open={isOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 text-xs md:text-sm">
+        <Button className="gap-2 text-xs md:text-sm" variant="outline">
           <Plus size={15} />
           {t("ADD_NEW_PASSKEY")}
         </Button>
@@ -70,25 +70,24 @@ export function AddPasskey() {
         </DialogHeader>
         <div className="grid gap-2">
           <form.Field
-            name="passkeyName"
             children={(field) => <FormField field={field} label={t("PASSKEY_NAME")} type="text" />}
+            name="passkeyName"
           />
         </div>
         <DialogFooter>
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
             children={([canSubmit, isSubmitting]) => (
               <Button
+                className="w-full"
                 disabled={!canSubmit || isSubmitting}
-                type="submit"
                 onClick={(e) => {
                   e.preventDefault();
                   form.handleSubmit();
                 }}
-                className="w-full"
+                type="submit"
               >
                 {isSubmitting ? (
-                  <Loader2 size={15} className="animate-spin" />
+                  <Loader2 className="animate-spin" size={15} />
                 ) : (
                   <>
                     <Fingerprint className="mr-2 h-4 w-4" />
@@ -97,6 +96,7 @@ export function AddPasskey() {
                 )}
               </Button>
             )}
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
           />
         </DialogFooter>
       </DialogContent>

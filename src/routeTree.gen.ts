@@ -8,8 +8,6 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createServerRootRoute } from '@tanstack/react-start/server'
-
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardLayoutRouteImport } from './routes/dashboard/layout'
 import { Route as authLayoutRouteImport } from './routes/(auth)/layout'
@@ -17,6 +15,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as publicIndexRouteImport } from './routes/(public)/index'
 import { Route as DashboardTanstackDbExampleRouteImport } from './routes/dashboard/tanstack-db-example'
 import { Route as DashboardProtectExamplesRouteImport } from './routes/dashboard/protect-examples'
+import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
@@ -30,18 +29,15 @@ import { Route as authTwoFactorIndexRouteImport } from './routes/(auth)/two-fact
 import { Route as DashboardChatVercelRouteImport } from './routes/dashboard/chat/vercel'
 import { Route as DashboardChatRagRouteImport } from './routes/dashboard/chat/rag'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
+import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAiChatRouteImport } from './routes/api/ai/chat'
 import { Route as authTwoFactorOtpRouteImport } from './routes/(auth)/two-factor/otp'
 import { Route as authAcceptInvitationInvitationIdIndexRouteImport } from './routes/(auth)/accept-invitation/$invitationId/index'
-import { ServerRoute as DotwellKnownOauthAuthorizationServerServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
-import { ServerRoute as ApiTrpcSplatServerRouteImport } from './routes/api/trpc/$'
-import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
-import { ServerRoute as ApiAiChatServerRouteImport } from './routes/api/ai/chat'
-import { ServerRoute as ApiAiVercelChatServerRouteImport } from './routes/api/ai/vercel/chat'
-import { ServerRoute as ApiAiMcpTransportServerRouteImport } from './routes/api/ai/mcp/$transport'
-import { ServerRoute as ApiAiChatRagServerRouteImport } from './routes/api/ai/chat.rag'
-import { ServerRoute as ApiAiChatImageGenerationServerRouteImport } from './routes/api/ai/chat.image.generation'
-
-const rootServerRouteImport = createServerRootRoute()
+import { Route as ApiAiVercelChatRouteImport } from './routes/api/ai/vercel/chat'
+import { Route as ApiAiMcpTransportRouteImport } from './routes/api/ai/mcp/$transport'
+import { Route as ApiAiChatRagRouteImport } from './routes/api/ai/chat.rag'
+import { Route as ApiAiChatImageGenerationRouteImport } from './routes/api/ai/chat.image.generation'
 
 const DashboardLayoutRoute = DashboardLayoutRouteImport.update({
   id: '/dashboard',
@@ -73,6 +69,12 @@ const DashboardProtectExamplesRoute =
     id: '/protect-examples',
     path: '/protect-examples',
     getParentRoute: () => DashboardLayoutRoute,
+  } as any)
+const DotwellKnownOauthAuthorizationServerRoute =
+  DotwellKnownOauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const authResetPasswordRoute = authResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -140,6 +142,21 @@ const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => DashboardLayoutRoute,
 } as any)
+const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
+  id: '/api/trpc/$',
+  path: '/api/trpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiChatRoute = ApiAiChatRouteImport.update({
+  id: '/api/ai/chat',
+  path: '/api/ai/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authTwoFactorOtpRoute = authTwoFactorOtpRouteImport.update({
   id: '/two-factor/otp',
   path: '/two-factor/otp',
@@ -151,47 +168,26 @@ const authAcceptInvitationInvitationIdIndexRoute =
     path: '/accept-invitation/$invitationId/',
     getParentRoute: () => authLayoutRoute,
   } as any)
-const DotwellKnownOauthAuthorizationServerServerRoute =
-  DotwellKnownOauthAuthorizationServerServerRouteImport.update({
-    id: '/.well-known/oauth-authorization-server',
-    path: '/.well-known/oauth-authorization-server',
-    getParentRoute: () => rootServerRouteImport,
-  } as any)
-const ApiTrpcSplatServerRoute = ApiTrpcSplatServerRouteImport.update({
-  id: '/api/trpc/$',
-  path: '/api/trpc/$',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
-const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
-const ApiAiChatServerRoute = ApiAiChatServerRouteImport.update({
-  id: '/api/ai/chat',
-  path: '/api/ai/chat',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
-const ApiAiVercelChatServerRoute = ApiAiVercelChatServerRouteImport.update({
+const ApiAiVercelChatRoute = ApiAiVercelChatRouteImport.update({
   id: '/api/ai/vercel/chat',
   path: '/api/ai/vercel/chat',
-  getParentRoute: () => rootServerRouteImport,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAiMcpTransportServerRoute = ApiAiMcpTransportServerRouteImport.update({
+const ApiAiMcpTransportRoute = ApiAiMcpTransportRouteImport.update({
   id: '/api/ai/mcp/$transport',
   path: '/api/ai/mcp/$transport',
-  getParentRoute: () => rootServerRouteImport,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAiChatRagServerRoute = ApiAiChatRagServerRouteImport.update({
+const ApiAiChatRagRoute = ApiAiChatRagRouteImport.update({
   id: '/rag',
   path: '/rag',
-  getParentRoute: () => ApiAiChatServerRoute,
+  getParentRoute: () => ApiAiChatRoute,
 } as any)
-const ApiAiChatImageGenerationServerRoute =
-  ApiAiChatImageGenerationServerRouteImport.update({
+const ApiAiChatImageGenerationRoute =
+  ApiAiChatImageGenerationRouteImport.update({
     id: '/image/generation',
     path: '/image/generation',
-    getParentRoute: () => ApiAiChatServerRoute,
+    getParentRoute: () => ApiAiChatRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -201,10 +197,14 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
   '/reset-password': typeof authResetPasswordRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/dashboard/protect-examples': typeof DashboardProtectExamplesRoute
   '/dashboard/tanstack-db-example': typeof DashboardTanstackDbExampleRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/two-factor/otp': typeof authTwoFactorOtpRoute
+  '/api/ai/chat': typeof ApiAiChatRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/chat/rag': typeof DashboardChatRagRoute
   '/dashboard/chat/vercel': typeof DashboardChatVercelRoute
@@ -214,7 +214,11 @@ export interface FileRoutesByFullPath {
   '/dashboard/settings-enhanced': typeof DashboardSettingsEnhancedIndexRoute
   '/dashboard/settings': typeof DashboardSettingsIndexRoute
   '/dashboard/workspace': typeof DashboardWorkspaceIndexRoute
+  '/api/ai/chat/rag': typeof ApiAiChatRagRoute
+  '/api/ai/mcp/$transport': typeof ApiAiMcpTransportRoute
+  '/api/ai/vercel/chat': typeof ApiAiVercelChatRoute
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdIndexRoute
+  '/api/ai/chat/image/generation': typeof ApiAiChatImageGenerationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof publicIndexRoute
@@ -222,10 +226,14 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
   '/reset-password': typeof authResetPasswordRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/dashboard/protect-examples': typeof DashboardProtectExamplesRoute
   '/dashboard/tanstack-db-example': typeof DashboardTanstackDbExampleRoute
   '/dashboard': typeof DashboardIndexRoute
   '/two-factor/otp': typeof authTwoFactorOtpRoute
+  '/api/ai/chat': typeof ApiAiChatRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/chat/rag': typeof DashboardChatRagRoute
   '/dashboard/chat/vercel': typeof DashboardChatVercelRoute
@@ -235,7 +243,11 @@ export interface FileRoutesByTo {
   '/dashboard/settings-enhanced': typeof DashboardSettingsEnhancedIndexRoute
   '/dashboard/settings': typeof DashboardSettingsIndexRoute
   '/dashboard/workspace': typeof DashboardWorkspaceIndexRoute
+  '/api/ai/chat/rag': typeof ApiAiChatRagRoute
+  '/api/ai/mcp/$transport': typeof ApiAiMcpTransportRoute
+  '/api/ai/vercel/chat': typeof ApiAiVercelChatRoute
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdIndexRoute
+  '/api/ai/chat/image/generation': typeof ApiAiChatImageGenerationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -245,11 +257,15 @@ export interface FileRoutesById {
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/register': typeof authRegisterRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/dashboard/protect-examples': typeof DashboardProtectExamplesRoute
   '/dashboard/tanstack-db-example': typeof DashboardTanstackDbExampleRoute
   '/(public)/': typeof publicIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/(auth)/two-factor/otp': typeof authTwoFactorOtpRoute
+  '/api/ai/chat': typeof ApiAiChatRouteWithChildren
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/chat/rag': typeof DashboardChatRagRoute
   '/dashboard/chat/vercel': typeof DashboardChatVercelRoute
@@ -259,7 +275,11 @@ export interface FileRoutesById {
   '/dashboard/settings-enhanced/': typeof DashboardSettingsEnhancedIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/workspace/': typeof DashboardWorkspaceIndexRoute
+  '/api/ai/chat/rag': typeof ApiAiChatRagRoute
+  '/api/ai/mcp/$transport': typeof ApiAiMcpTransportRoute
+  '/api/ai/vercel/chat': typeof ApiAiVercelChatRoute
   '/(auth)/accept-invitation/$invitationId/': typeof authAcceptInvitationInvitationIdIndexRoute
+  '/api/ai/chat/image/generation': typeof ApiAiChatImageGenerationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,10 +290,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/reset-password'
+    | '/.well-known/oauth-authorization-server'
     | '/dashboard/protect-examples'
     | '/dashboard/tanstack-db-example'
     | '/dashboard/'
     | '/two-factor/otp'
+    | '/api/ai/chat'
+    | '/api/auth/$'
+    | '/api/trpc/$'
     | '/dashboard/admin/users'
     | '/dashboard/chat/rag'
     | '/dashboard/chat/vercel'
@@ -283,7 +307,11 @@ export interface FileRouteTypes {
     | '/dashboard/settings-enhanced'
     | '/dashboard/settings'
     | '/dashboard/workspace'
+    | '/api/ai/chat/rag'
+    | '/api/ai/mcp/$transport'
+    | '/api/ai/vercel/chat'
     | '/accept-invitation/$invitationId'
+    | '/api/ai/chat/image/generation'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -291,10 +319,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/reset-password'
+    | '/.well-known/oauth-authorization-server'
     | '/dashboard/protect-examples'
     | '/dashboard/tanstack-db-example'
     | '/dashboard'
     | '/two-factor/otp'
+    | '/api/ai/chat'
+    | '/api/auth/$'
+    | '/api/trpc/$'
     | '/dashboard/admin/users'
     | '/dashboard/chat/rag'
     | '/dashboard/chat/vercel'
@@ -304,7 +336,11 @@ export interface FileRouteTypes {
     | '/dashboard/settings-enhanced'
     | '/dashboard/settings'
     | '/dashboard/workspace'
+    | '/api/ai/chat/rag'
+    | '/api/ai/mcp/$transport'
+    | '/api/ai/vercel/chat'
     | '/accept-invitation/$invitationId'
+    | '/api/ai/chat/image/generation'
   id:
     | '__root__'
     | '/(auth)'
@@ -313,11 +349,15 @@ export interface FileRouteTypes {
     | '/(auth)/login'
     | '/(auth)/register'
     | '/(auth)/reset-password'
+    | '/.well-known/oauth-authorization-server'
     | '/dashboard/protect-examples'
     | '/dashboard/tanstack-db-example'
     | '/(public)/'
     | '/dashboard/'
     | '/(auth)/two-factor/otp'
+    | '/api/ai/chat'
+    | '/api/auth/$'
+    | '/api/trpc/$'
     | '/dashboard/admin/users'
     | '/dashboard/chat/rag'
     | '/dashboard/chat/vercel'
@@ -327,85 +367,23 @@ export interface FileRouteTypes {
     | '/dashboard/settings-enhanced/'
     | '/dashboard/settings/'
     | '/dashboard/workspace/'
+    | '/api/ai/chat/rag'
+    | '/api/ai/mcp/$transport'
+    | '/api/ai/vercel/chat'
     | '/(auth)/accept-invitation/$invitationId/'
+    | '/api/ai/chat/image/generation'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   authLayoutRoute: typeof authLayoutRouteWithChildren
   DashboardLayoutRoute: typeof DashboardLayoutRouteWithChildren
+  DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   publicIndexRoute: typeof publicIndexRoute
-}
-export interface FileServerRoutesByFullPath {
-  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerServerRoute
-  '/api/ai/chat': typeof ApiAiChatServerRouteWithChildren
-  '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/trpc/$': typeof ApiTrpcSplatServerRoute
-  '/api/ai/chat/rag': typeof ApiAiChatRagServerRoute
-  '/api/ai/mcp/$transport': typeof ApiAiMcpTransportServerRoute
-  '/api/ai/vercel/chat': typeof ApiAiVercelChatServerRoute
-  '/api/ai/chat/image/generation': typeof ApiAiChatImageGenerationServerRoute
-}
-export interface FileServerRoutesByTo {
-  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerServerRoute
-  '/api/ai/chat': typeof ApiAiChatServerRouteWithChildren
-  '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/trpc/$': typeof ApiTrpcSplatServerRoute
-  '/api/ai/chat/rag': typeof ApiAiChatRagServerRoute
-  '/api/ai/mcp/$transport': typeof ApiAiMcpTransportServerRoute
-  '/api/ai/vercel/chat': typeof ApiAiVercelChatServerRoute
-  '/api/ai/chat/image/generation': typeof ApiAiChatImageGenerationServerRoute
-}
-export interface FileServerRoutesById {
-  __root__: typeof rootServerRouteImport
-  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerServerRoute
-  '/api/ai/chat': typeof ApiAiChatServerRouteWithChildren
-  '/api/auth/$': typeof ApiAuthSplatServerRoute
-  '/api/trpc/$': typeof ApiTrpcSplatServerRoute
-  '/api/ai/chat/rag': typeof ApiAiChatRagServerRoute
-  '/api/ai/mcp/$transport': typeof ApiAiMcpTransportServerRoute
-  '/api/ai/vercel/chat': typeof ApiAiVercelChatServerRoute
-  '/api/ai/chat/image/generation': typeof ApiAiChatImageGenerationServerRoute
-}
-export interface FileServerRouteTypes {
-  fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths:
-    | '/.well-known/oauth-authorization-server'
-    | '/api/ai/chat'
-    | '/api/auth/$'
-    | '/api/trpc/$'
-    | '/api/ai/chat/rag'
-    | '/api/ai/mcp/$transport'
-    | '/api/ai/vercel/chat'
-    | '/api/ai/chat/image/generation'
-  fileServerRoutesByTo: FileServerRoutesByTo
-  to:
-    | '/.well-known/oauth-authorization-server'
-    | '/api/ai/chat'
-    | '/api/auth/$'
-    | '/api/trpc/$'
-    | '/api/ai/chat/rag'
-    | '/api/ai/mcp/$transport'
-    | '/api/ai/vercel/chat'
-    | '/api/ai/chat/image/generation'
-  id:
-    | '__root__'
-    | '/.well-known/oauth-authorization-server'
-    | '/api/ai/chat'
-    | '/api/auth/$'
-    | '/api/trpc/$'
-    | '/api/ai/chat/rag'
-    | '/api/ai/mcp/$transport'
-    | '/api/ai/vercel/chat'
-    | '/api/ai/chat/image/generation'
-  fileServerRoutesById: FileServerRoutesById
-}
-export interface RootServerRouteChildren {
-  DotwellKnownOauthAuthorizationServerServerRoute: typeof DotwellKnownOauthAuthorizationServerServerRoute
-  ApiAiChatServerRoute: typeof ApiAiChatServerRouteWithChildren
-  ApiAuthSplatServerRoute: typeof ApiAuthSplatServerRoute
-  ApiTrpcSplatServerRoute: typeof ApiTrpcSplatServerRoute
-  ApiAiMcpTransportServerRoute: typeof ApiAiMcpTransportServerRoute
-  ApiAiVercelChatServerRoute: typeof ApiAiVercelChatServerRoute
+  ApiAiChatRoute: typeof ApiAiChatRouteWithChildren
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
+  ApiAiMcpTransportRoute: typeof ApiAiMcpTransportRoute
+  ApiAiVercelChatRoute: typeof ApiAiVercelChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -451,6 +429,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/protect-examples'
       preLoaderRoute: typeof DashboardProtectExamplesRouteImport
       parentRoute: typeof DashboardLayoutRoute
+    }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)/reset-password': {
       id: '/(auth)/reset-password'
@@ -543,6 +528,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminUsersRouteImport
       parentRoute: typeof DashboardLayoutRoute
     }
+    '/api/trpc/$': {
+      id: '/api/trpc/$'
+      path: '/api/trpc/$'
+      fullPath: '/api/trpc/$'
+      preLoaderRoute: typeof ApiTrpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/chat': {
+      id: '/api/ai/chat'
+      path: '/api/ai/chat'
+      fullPath: '/api/ai/chat'
+      preLoaderRoute: typeof ApiAiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(auth)/two-factor/otp': {
       id: '/(auth)/two-factor/otp'
       path: '/two-factor/otp'
@@ -557,65 +563,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAcceptInvitationInvitationIdIndexRouteImport
       parentRoute: typeof authLayoutRoute
     }
-  }
-}
-declare module '@tanstack/react-start/server' {
-  interface ServerFileRoutesByPath {
-    '/.well-known/oauth-authorization-server': {
-      id: '/.well-known/oauth-authorization-server'
-      path: '/.well-known/oauth-authorization-server'
-      fullPath: '/.well-known/oauth-authorization-server'
-      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
-    '/api/trpc/$': {
-      id: '/api/trpc/$'
-      path: '/api/trpc/$'
-      fullPath: '/api/trpc/$'
-      preLoaderRoute: typeof ApiTrpcSplatServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
-    '/api/ai/chat': {
-      id: '/api/ai/chat'
-      path: '/api/ai/chat'
-      fullPath: '/api/ai/chat'
-      preLoaderRoute: typeof ApiAiChatServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
     '/api/ai/vercel/chat': {
       id: '/api/ai/vercel/chat'
       path: '/api/ai/vercel/chat'
       fullPath: '/api/ai/vercel/chat'
-      preLoaderRoute: typeof ApiAiVercelChatServerRouteImport
-      parentRoute: typeof rootServerRouteImport
+      preLoaderRoute: typeof ApiAiVercelChatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ai/mcp/$transport': {
       id: '/api/ai/mcp/$transport'
       path: '/api/ai/mcp/$transport'
       fullPath: '/api/ai/mcp/$transport'
-      preLoaderRoute: typeof ApiAiMcpTransportServerRouteImport
-      parentRoute: typeof rootServerRouteImport
+      preLoaderRoute: typeof ApiAiMcpTransportRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ai/chat/rag': {
       id: '/api/ai/chat/rag'
       path: '/rag'
       fullPath: '/api/ai/chat/rag'
-      preLoaderRoute: typeof ApiAiChatRagServerRouteImport
-      parentRoute: typeof ApiAiChatServerRoute
+      preLoaderRoute: typeof ApiAiChatRagRouteImport
+      parentRoute: typeof ApiAiChatRoute
     }
     '/api/ai/chat/image/generation': {
       id: '/api/ai/chat/image/generation'
       path: '/image/generation'
       fullPath: '/api/ai/chat/image/generation'
-      preLoaderRoute: typeof ApiAiChatImageGenerationServerRouteImport
-      parentRoute: typeof ApiAiChatServerRoute
+      preLoaderRoute: typeof ApiAiChatImageGenerationRouteImport
+      parentRoute: typeof ApiAiChatRoute
     }
   }
 }
@@ -677,37 +651,41 @@ const DashboardLayoutRouteWithChildren = DashboardLayoutRoute._addFileChildren(
   DashboardLayoutRouteChildren,
 )
 
-interface ApiAiChatServerRouteChildren {
-  ApiAiChatRagServerRoute: typeof ApiAiChatRagServerRoute
-  ApiAiChatImageGenerationServerRoute: typeof ApiAiChatImageGenerationServerRoute
+interface ApiAiChatRouteChildren {
+  ApiAiChatRagRoute: typeof ApiAiChatRagRoute
+  ApiAiChatImageGenerationRoute: typeof ApiAiChatImageGenerationRoute
 }
 
-const ApiAiChatServerRouteChildren: ApiAiChatServerRouteChildren = {
-  ApiAiChatRagServerRoute: ApiAiChatRagServerRoute,
-  ApiAiChatImageGenerationServerRoute: ApiAiChatImageGenerationServerRoute,
+const ApiAiChatRouteChildren: ApiAiChatRouteChildren = {
+  ApiAiChatRagRoute: ApiAiChatRagRoute,
+  ApiAiChatImageGenerationRoute: ApiAiChatImageGenerationRoute,
 }
 
-const ApiAiChatServerRouteWithChildren = ApiAiChatServerRoute._addFileChildren(
-  ApiAiChatServerRouteChildren,
+const ApiAiChatRouteWithChildren = ApiAiChatRoute._addFileChildren(
+  ApiAiChatRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   authLayoutRoute: authLayoutRouteWithChildren,
   DashboardLayoutRoute: DashboardLayoutRouteWithChildren,
+  DotwellKnownOauthAuthorizationServerRoute:
+    DotwellKnownOauthAuthorizationServerRoute,
   publicIndexRoute: publicIndexRoute,
+  ApiAiChatRoute: ApiAiChatRouteWithChildren,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiTrpcSplatRoute: ApiTrpcSplatRoute,
+  ApiAiMcpTransportRoute: ApiAiMcpTransportRoute,
+  ApiAiVercelChatRoute: ApiAiVercelChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-const rootServerRouteChildren: RootServerRouteChildren = {
-  DotwellKnownOauthAuthorizationServerServerRoute:
-    DotwellKnownOauthAuthorizationServerServerRoute,
-  ApiAiChatServerRoute: ApiAiChatServerRouteWithChildren,
-  ApiAuthSplatServerRoute: ApiAuthSplatServerRoute,
-  ApiTrpcSplatServerRoute: ApiTrpcSplatServerRoute,
-  ApiAiMcpTransportServerRoute: ApiAiMcpTransportServerRoute,
-  ApiAiVercelChatServerRoute: ApiAiVercelChatServerRoute,
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
 }
-export const serverRouteTree = rootServerRouteImport
-  ._addFileChildren(rootServerRouteChildren)
-  ._addFileTypes<FileServerRouteTypes>()

@@ -13,33 +13,30 @@ dotenv.config();
 export default defineConfig({
   optimizeDeps: {
     entries: ["src/**/*.tsx", "src/**/*.ts"],
+    exclude: ["pdfjs", "pdf-parse"],
   },
   server: {
-    warmup: {
-      clientFiles: ["./src/server.tsx"],
-    },
-    port: 5050,
+    port: 3000,
   },
   plugins: [
     devtools(),
     viteTsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
-    viteReact(),
     postgresPlugin({
       // env: ".env.local", // Path to your .env file (default: ".env")
       // envKey: "DATABASE_URL", // Name of the env variable (default: "DATABASE_URL")
     }),
     tailwindcss(),
     tanstackStart({
-      tsr: {
+      router: {
         routeToken: "layout",
       },
-      spa: {
-        enabled: false,
-      },
-      customViteReactPlugin: true,
+      srcDirectory: "src",
+      start: { entry: "./start.tsx" },
+      server: { entry: "./server.ts" },
     }),
+    viteReact(),
     sentryVitePlugin({
       org: process.env.VITE_SENTRY_ORG,
       project: process.env.VITE_SENTRY_PROJECT,

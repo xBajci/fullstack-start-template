@@ -1,7 +1,8 @@
+/** biome-ignore-all lint/style/noMagicNumbers: <explanation> */
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 
 import { createIsomorphicFn, createServerFn } from "@tanstack/react-start";
-import { getWebRequest } from "@tanstack/react-start/server";
+import { getRequest } from "@tanstack/react-start/server";
 import { createTRPCClient, httpBatchLink, httpLink, isNonJsonSerializable, loggerLink, splitLink } from "@trpc/client";
 import type { TRPCCombinedDataTransformer } from "@trpc/server";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
@@ -27,8 +28,8 @@ export const transformer: TRPCCombinedDataTransformer = {
   output: SuperJSON,
 };
 
-const getRequestHeaders = createServerFn({ method: "GET" }).handler(async () => {
-  const request = getWebRequest();
+const getRequestHeaders = createServerFn({ method: "GET" }).handler(() => {
+  const request = getRequest();
   const headers = new Headers(request?.headers);
 
   return Object.fromEntries(headers);
@@ -40,7 +41,9 @@ const headers = createIsomorphicFn()
 
 function getUrl() {
   const base = (() => {
-    if (typeof window !== "undefined") return "";
+    if (typeof window !== "undefined") {
+      return "";
+    }
     return `http://localhost:${process.env.PORT ?? 3000}`;
   })();
   return `${base}/api/trpc`;
@@ -80,15 +83,15 @@ export const trpcClient = createTRPCClient<TRPCRouter>({
   ],
 });
 
-export const createQueryClient = () => {
-  return new QueryClient({
+export const createQueryClient = () =>
+  new QueryClient({
     defaultOptions: {
       dehydrate: { serializeData: superjson.serialize },
       hydrate: { deserializeData: superjson.deserialize },
     },
     queryCache: new QueryCache(),
   });
-};
+
 export const createServerHelpers = ({ queryClient }: { queryClient: QueryClient }) => {
   const serverHelpers = createTRPCOptionsProxy({
     client: trpcClient,

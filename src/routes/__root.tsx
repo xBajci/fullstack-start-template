@@ -6,7 +6,6 @@ import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanst
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { ThemeProvider } from "next-themes";
-import React from "react";
 import { I18nextProvider } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner";
 import i18n from "@/lib/intl/i18n";
