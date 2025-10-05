@@ -1,13 +1,26 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
-import { AlertCircle, Key, Loader2 } from "lucide-react";
+import { AlertCircle, Key } from "lucide-react";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { FormField } from "@/components/form/form-field";
-import { PasswordField } from "@/components/form/password-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { useLogin } from "@/features/auth/auth-hooks";
 import { authClient } from "@/lib/auth/auth-client";
 import { useTranslation } from "@/lib/intl/react";
@@ -24,28 +37,27 @@ export default function SignInForm() {
   const { loginWithCredentials, loginWithPasskey, loginWithSocial } = useLogin();
 
   const form = useForm({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
       email: "",
       password: "",
       rememberMe: false,
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = signInSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.flatten().fieldErrors;
-        }
-        return;
-      },
-    },
-    onSubmit: ({ value }) => {
-      loginWithCredentials.mutate({
-        email: value.email,
-        password: value.password,
-        rememberMe: value.rememberMe,
-      });
-    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const onSubmit = (data: z.infer<typeof signInSchema>) => {
+    loginWithCredentials.mutate({
+      email: data.email,
+      password: data.password,
+      rememberMe: data.rememberMe,
+    });
+  };
 
   return (
     <Card className="w-full max-w-md">
@@ -54,14 +66,7 @@ export default function SignInForm() {
         <CardDescription className="text-xs md:text-sm">{t("SIGN_IN_DESC")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="grid gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
+        <form className="grid gap-4" onSubmit={handleSubmit(onSubmit)}>
           {/* Display login errors */}
           {loginWithCredentials.error && (
             <Alert variant="destructive">
@@ -89,72 +94,59 @@ export default function SignInForm() {
               </AlertDescription>
             </Alert>
           )}
-          <div className="grid gap-2">
-            <form.Field
-              children={(field) => (
-                <FormField field={field} label={t("EMAIL")} placeholder="m@example.com" type="email" />
-              )}
-              name="email"
-            />
-          </div>
+          <Field>
+            <FieldLabel htmlFor="email">{t("EMAIL")}</FieldLabel>
+            <InputGroup>
+              <InputGroupInput id="email" placeholder="m@example.com" type="email" {...register("email")} />
+            </InputGroup>
+            <FieldError errors={errors.email} />
+          </Field>
 
-          <div className="grid gap-2">
+          <Field>
             <div className="flex items-center">
-              <span className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {t("PASSWORD")}
-              </span>
+              <FieldLabel htmlFor="password">{t("PASSWORD")}</FieldLabel>
               <Link className="ml-auto inline-block text-sm underline" to="/forgot-password">
                 {t("FORGOT_YOUR_PASSWORD")}
               </Link>
             </div>
-            <form.Field
-              children={(field) => <PasswordField field={field} label="" placeholder="password" />}
-              name="password"
-            />
-          </div>
+            <InputGroup>
+              <InputGroupInput id="password" placeholder="password" type="password" {...register("password")} />
+            </InputGroup>
+            <FieldError errors={errors.password} />
+          </Field>
 
-          <div className="flex items-center gap-2">
-            <form.Field
-              children={(field) => (
-                <>
-                  <Checkbox
-                    checked={field.state.value}
-                    id="remember"
-                    onCheckedChange={(checked) => field.handleChange(!!checked)}
-                  />
-                  <label
-                    className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    htmlFor="remember"
-                  >
-                    {t("REMEMBER_ME")}
-                  </label>
-                </>
-              )}
-              name="rememberMe"
+          <Field orientation="horizontal">
+            <Checkbox
+              checked={form.watch("rememberMe")}
+              id="remember"
+              onCheckedChange={(checked) => form.setValue("rememberMe", !!checked)}
             />
-          </div>
+            <FieldLabel
+              className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              htmlFor="remember"
+            >
+              {t("REMEMBER_ME")}
+            </FieldLabel>
+          </Field>
 
-          <form.Subscribe
-            children={([canSubmit]) => (
-              <Button className="w-full" disabled={!canSubmit || loginWithCredentials.isPending} type="submit">
-                {loginWithCredentials.isPending ? <Loader2 className="animate-spin" size={16} /> : t("LOGIN")}
-              </Button>
-            )}
-            selector={(state) => [state.canSubmit]}
-          />
+          <ButtonGroup className="w-full">
+            <Button className="w-full" disabled={isSubmitting || loginWithCredentials.isPending} type="submit">
+              {loginWithCredentials.isPending || isSubmitting ? <Spinner size="sm" /> : t("LOGIN")}
+            </Button>
+          </ButtonGroup>
         </form>
 
         <div className="mt-4 grid gap-4">
           <Button
             className="gap-2"
-            onClick={async () => {
+            onClick={() => {
               loginWithPasskey.mutate();
             }}
             variant="secondary"
           >
             <Key size={16} />
             {t("SIGN_IN_WITH_PASSKEY")}
-            {loginWithPasskey.isPending && <Loader2 className="animate-spin" size={16} />}
+            {loginWithPasskey.isPending && <Spinner />}
           </Button>
 
           <div className={cn("flex w-full items-center gap-2", "flex-col justify-between")}>

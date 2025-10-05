@@ -1,9 +1,8 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDownIcon,
   Copy,
-  Loader2,
   MailPlus,
   MoreHorizontal,
   PlusIcon,
@@ -16,13 +15,14 @@ import {
   UserX,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 import CopyButton from "@/components/copy-button";
-import { FormField } from "@/components/form/form-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -42,10 +42,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Field, FieldContent, FieldError, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -77,38 +80,38 @@ function InviteMemberDialog() {
   const inviteMember = useInviteMember();
 
   const form = useForm({
+    resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
       email: "",
       role: "member" as "admin" | "member",
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = inviteMemberSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      inviteMember.mutate(
-        {
-          email: value.email,
-          role: value.role,
-        },
-        {
-          onSuccess: () => {
-            toast.success("Member invited successfully");
-            form.reset();
-            setOpen(false);
-          },
-          onError: (error) => {
-            toast.error(error.message);
-          },
-        }
-      );
-    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = form;
+
+  const onSubmit = (data: z.infer<typeof inviteMemberSchema>) => {
+    inviteMember.mutate(
+      {
+        email: data.email,
+        role: data.role,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Member invited successfully");
+          reset();
+          setOpen(false);
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      }
+    );
+  };
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -123,65 +126,41 @@ function InviteMemberDialog() {
           <DialogTitle>Invite Member</DialogTitle>
           <DialogDescription>Send an invitation to join your organization</DialogDescription>
         </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <form.Field
-                children={(field) => (
-                  <FormField field={field} label="Email" placeholder="Enter email address" type="email" />
-                )}
-                name="email"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Role</Label>
-              <form.Field
-                children={(field) => (
-                  <Select
-                    onValueChange={(value) => field.handleChange(value as "admin" | "member")}
-                    value={field.state.value}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="member">Member</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                name="role"
-              />
-            </div>
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <FieldSet>
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <InputGroup>
+                <InputGroupInput id="email" placeholder="Enter email address" type="email" {...register("email")} />
+              </InputGroup>
+              <FieldError errors={errors.email} />
+            </Field>
+
+            <Field>
+              <FieldLabel>Role</FieldLabel>
+              <FieldContent>
+                <Select
+                  onValueChange={(value) => form.setValue("role", value as "admin" | "member")}
+                  value={form.watch("role")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldContent>
+            </Field>
+          </FieldSet>
         </form>
         <DialogFooter>
-          <form.Subscribe
-            children={([canSubmit, isSubmitting]) => (
-              <DialogClose asChild>
-                <Button
-                  disabled={!canSubmit || isSubmitting || inviteMember.isPending}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    form.handleSubmit();
-                  }}
-                >
-                  {inviteMember.isPending || isSubmitting ? (
-                    <Loader2 className="animate-spin" size={16} />
-                  ) : (
-                    "Send Invitation"
-                  )}
-                </Button>
-              </DialogClose>
-            )}
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-          />
+          <ButtonGroup>
+            <Button disabled={isSubmitting || inviteMember.isPending} onClick={handleSubmit(onSubmit)} type="submit">
+              {inviteMember.isPending || isSubmitting ? <Spinner size="sm" /> : "Send Invitation"}
+            </Button>
+          </ButtonGroup>
         </DialogFooter>
       </DialogContent>
     </Dialog>

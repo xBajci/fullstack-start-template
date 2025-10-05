@@ -1,11 +1,16 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { FormField } from "@/components/form/form-field";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldContent, FieldError, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuthHelpers } from "@/features/auth/auth-hooks";
 import { useTranslation } from "@/lib/intl/react";
 
@@ -26,38 +31,37 @@ export default function Component() {
   const userEmail = "user@example.com";
 
   const form = useForm({
+    resolver: zodResolver(otpSchema),
     defaultValues: {
       otp: "",
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = otpSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        const res = await verifyOtp.mutateAsync({
-          code: value.otp,
-        });
-        if (res.data) {
-          setMessage(t("OTP_VALIDATED"));
-          setIsError(false);
-          setIsValidated(true);
-          router.navigate({ to: "/" });
-        } else {
-          setIsError(true);
-          setMessage(t("INVALID_OTP"));
-        }
-      } catch (error) {
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const onSubmit = async (data: z.infer<typeof otpSchema>) => {
+    try {
+      const res = await verifyOtp.mutateAsync({
+        code: data.otp,
+      });
+      if (res.data) {
+        setMessage(t("OTP_VALIDATED"));
+        setIsError(false);
+        setIsValidated(true);
+        router.navigate({ to: "/" });
+      } else {
         setIsError(true);
         setMessage(t("INVALID_OTP"));
       }
-    },
-  });
+    } catch (error) {
+      setIsError(true);
+      setMessage(t("INVALID_OTP"));
+    }
+  };
 
   const requestOTP = async () => {
     await sendOtp.mutateAsync();
@@ -74,41 +78,32 @@ export default function Component() {
         </CardHeader>
         <CardContent>
           <div className="grid w-full items-center gap-4">
-            {!isOtpSent ? (
-              <Button onClick={requestOTP} className="w-full">
+            {isOtpSent ? (
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <FieldSet>
+                  <Field>
+                    <FieldLabel htmlFor="otp">{t("ONE_TIME_PASSWORD")}</FieldLabel>
+                    <FieldContent>
+                      <p className="py-2 text-muted-foreground text-sm">
+                        {t("CHECK_EMAIL_OTP")} {userEmail}
+                      </p>
+                      <InputGroup>
+                        <InputGroupInput id="otp" placeholder={t("ENTER_6_DIGIT")} type="text" {...register("otp")} />
+                      </InputGroup>
+                    </FieldContent>
+                    <FieldError errors={errors.otp} />
+                  </Field>
+                </FieldSet>
+                <ButtonGroup>
+                  <Button className="mt-4 w-full" disabled={isSubmitting || isValidated} type="submit">
+                    {isSubmitting ? <Spinner size="sm" /> : t("VALIDATE_OTP")}
+                  </Button>
+                </ButtonGroup>
+              </form>
+            ) : (
+              <Button className="w-full" onClick={requestOTP}>
                 <Mail className="mr-2 h-4 w-4" /> {t("SEND_OTP_EMAIL")}
               </Button>
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  form.handleSubmit();
-                }}
-              >
-                <div className="flex flex-col space-y-1.5">
-                  <span className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    {t("ONE_TIME_PASSWORD")}
-                  </span>
-                  <span className="py-2 text-muted-foreground text-sm">
-                    {t("CHECK_EMAIL_OTP")} {userEmail}
-                  </span>
-                  <form.Field
-                    name="otp"
-                    children={(field) => (
-                      <FormField field={field} label="" type="text" placeholder={t("ENTER_6_DIGIT")} />
-                    )}
-                  />
-                </div>
-                <form.Subscribe
-                  selector={(state) => [state.canSubmit, state.isSubmitting]}
-                  children={([canSubmit, isSubmitting]) => (
-                    <Button type="submit" className="mt-4 w-full" disabled={!canSubmit || isSubmitting || isValidated}>
-                      {t("VALIDATE_OTP")}
-                    </Button>
-                  )}
-                />
-              </form>
             )}
           </div>
           {message && (

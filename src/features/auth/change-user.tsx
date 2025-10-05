@@ -1,12 +1,13 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@tanstack/react-router";
-import { Edit, Loader2, X } from "lucide-react";
+import { Edit, X } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as z from "zod";
-import { FormField } from "@/components/form/form-field";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +17,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Field, FieldContent, FieldError, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/features/auth/auth-hooks";
 import { authClient } from "@/lib/auth/auth-client";
 import { convertImageToBase64 } from "@/lib/utils";
@@ -35,47 +39,48 @@ export function ChangeUser() {
   const [open, setOpen] = useState<boolean>(false);
 
   const form = useForm({
+    resolver: zodResolver(changeUserSchema),
     defaultValues: {
       name: "",
       image: undefined as File | undefined,
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = changeUserSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        await authClient.updateUser({
-          image: value.image ? await convertImageToBase64(value.image) : undefined,
-          name: value.name ? value.name : undefined,
-          fetchOptions: {
-            onSuccess: () => {
-              toast.success("User updated successfully");
-            },
-            onError: (error) => {
-              toast.error(error.error.message);
-            },
-          },
-        });
-        form.reset();
-        router.invalidate();
-        setImagePreview(null);
-        setOpen(false);
-      } catch (error) {
-        toast.error("An error occurred while updating user");
-      }
-    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    reset,
+  } = form;
+
+  const onSubmit = async (data: z.infer<typeof changeUserSchema>) => {
+    try {
+      await authClient.updateUser({
+        image: data.image ? await convertImageToBase64(data.image) : undefined,
+        name: data.name ? data.name : undefined,
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success("User updated successfully");
+          },
+          onError: (error) => {
+            toast.error(error.error.message);
+          },
+        },
+      });
+      reset();
+      router.invalidate();
+      setImagePreview(null);
+      setOpen(false);
+    } catch (error) {
+      toast.error("An error occurred while updating user");
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      form.setFieldValue("image", file);
+      setValue("image", file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -85,13 +90,13 @@ export function ChangeUser() {
   };
 
   const clearImage = () => {
-    form.setFieldValue("image", undefined);
+    setValue("image", undefined);
     setImagePreview(null);
   };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2" variant="secondary">
+        <Button className="gap-2" size="sm" variant="secondary">
           <Edit size={13} />
           {t("EDIT_USER")}
         </Button>
@@ -101,49 +106,44 @@ export function ChangeUser() {
           <DialogTitle>{t("EDIT_USER")}</DialogTitle>
           <DialogDescription>{t("EDIT_USER_DESC")}</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2">
-          <form.Field
-            name="name"
-            children={(field) => (
-              <FormField field={field} label={t("FULL_NAME")} type="text" placeholder={data?.user.name} />
-            )}
-          />
-          <div className="grid gap-2">
-            <Label htmlFor="image">{t("PROFILE_IMAGE")}</Label>
-            <div className="flex items-end gap-4">
-              {imagePreview && (
-                <div className="relative h-16 w-16 overflow-hidden rounded-sm">
-                  <img src={imagePreview} alt="Profile preview" className="h-full w-full object-cover" />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <FieldSet>
+            <Field>
+              <FieldLabel htmlFor="name">{t("FULL_NAME")}</FieldLabel>
+              <InputGroup>
+                <InputGroupInput id="name" placeholder={data?.user.name} type="text" {...register("name")} />
+              </InputGroup>
+              <FieldError errors={errors.name} />
+            </Field>
+
+            <Field>
+              <FieldLabel>{t("PROFILE_IMAGE")}</FieldLabel>
+              <FieldContent>
+                {imagePreview && (
+                  <div className="relative h-16 w-16 overflow-hidden rounded-sm">
+                    <img alt="Profile preview" className="h-full w-full object-cover" src={imagePreview} />
+                  </div>
+                )}
+                <div className="flex w-full items-center gap-2">
+                  <Input
+                    accept="image/*"
+                    className="w-full text-muted-foreground"
+                    id="image"
+                    onChange={handleImageChange}
+                    type="file"
+                  />
+                  {imagePreview && <X className="cursor-pointer" onClick={clearImage} />}
                 </div>
-              )}
-              <div className="flex w-full items-center gap-2">
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full text-muted-foreground"
-                />
-                {imagePreview && <X className="cursor-pointer" onClick={clearImage} />}
-              </div>
-            </div>
-          </div>
-        </div>
+              </FieldContent>
+            </Field>
+          </FieldSet>
+        </form>
         <DialogFooter>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
-              <Button
-                disabled={!canSubmit || isSubmitting}
-                onClick={(e) => {
-                  e.preventDefault();
-                  form.handleSubmit();
-                }}
-              >
-                {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : t("UPDATE")}
-              </Button>
-            )}
-          />
+          <ButtonGroup>
+            <Button disabled={isSubmitting} onClick={handleSubmit(onSubmit)} type="submit">
+              {isSubmitting ? <Spinner size="sm" /> : t("UPDATE")}
+            </Button>
+          </ButtonGroup>
         </DialogFooter>
       </DialogContent>
     </Dialog>
