@@ -2,6 +2,7 @@ import postgresPlugin from "@neondatabase/vite-plugin-postgres";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
+import { nitroV2Plugin } from "@tanstack/nitro-v2-vite-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import dotenv from "dotenv";
@@ -36,6 +37,7 @@ export default defineConfig({
       start: { entry: "./start.tsx" },
       server: { entry: "./server.ts" },
     }),
+    nitroV2Plugin({ preset: "vercel" }),
     viteReact(),
     sentryVitePlugin({
       org: process.env.VITE_SENTRY_ORG,

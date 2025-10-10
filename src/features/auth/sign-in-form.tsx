@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/performance/noNamespaceImport: <explanation> */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, Key } from "lucide-react";
@@ -8,21 +9,10 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldSet,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useLogin } from "@/features/auth/auth-hooks";
-import { authClient } from "@/lib/auth/auth-client";
 import { useTranslation } from "@/lib/intl/react";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +45,7 @@ export default function SignInForm() {
     loginWithCredentials.mutate({
       email: data.email,
       password: data.password,
-      rememberMe: data.rememberMe,
+      rememberMe: !!data.rememberMe,
     });
   };
 
@@ -99,7 +89,7 @@ export default function SignInForm() {
             <InputGroup>
               <InputGroupInput id="email" placeholder="m@example.com" type="email" {...register("email")} />
             </InputGroup>
-            <FieldError errors={errors.email} />
+            <FieldError errors={errors.email ? [{ message: errors.email.message }] : undefined} />
           </Field>
 
           <Field>
@@ -112,7 +102,7 @@ export default function SignInForm() {
             <InputGroup>
               <InputGroupInput id="password" placeholder="password" type="password" {...register("password")} />
             </InputGroup>
-            <FieldError errors={errors.password} />
+            <FieldError errors={errors.password?.message ? [{ message: errors.password.message }] : undefined} />
           </Field>
 
           <Field orientation="horizontal">
@@ -131,7 +121,7 @@ export default function SignInForm() {
 
           <ButtonGroup className="w-full">
             <Button className="w-full" disabled={isSubmitting || loginWithCredentials.isPending} type="submit">
-              {loginWithCredentials.isPending || isSubmitting ? <Spinner size="sm" /> : t("LOGIN")}
+              {loginWithCredentials.isPending || isSubmitting ? <Spinner /> : t("LOGIN")}
             </Button>
           </ButtonGroup>
         </form>
@@ -183,7 +173,7 @@ export default function SignInForm() {
             </Button>
             <Button
               className={cn("w-full gap-2")}
-              onClick={async () => {
+              onClick={() => {
                 loginWithSocial.mutate({
                   provider: "github",
                   callbackURL: "/dashboard",
