@@ -98,8 +98,8 @@ export const useRegister = ({
 }: {
   onSuccess: () => void;
   onError: (error: ErrorContext) => void;
-}) => {
-  return useMutation({
+}) =>
+  useMutation({
     mutationFn: async ({ email, password, name }: { email: string; password: string; name: string }) =>
       await authClient.signUp.email(
         { email, password, name },
@@ -110,10 +110,9 @@ export const useRegister = ({
           onError: (error: ErrorContext) => {
             onError(error);
           },
-        },
+        }
       ),
   });
-};
 
 export const useAuthHelpers = () => {
   const forgotPassword = useMutation({

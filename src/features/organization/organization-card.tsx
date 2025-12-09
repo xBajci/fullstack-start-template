@@ -1,13 +1,14 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDownIcon, Loader2, MailPlus, PlusIcon } from "lucide-react";
+import { ChevronDownIcon, MailPlus, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 import CopyButton from "@/components/copy-button";
-import { FormField } from "@/components/form/form-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -25,9 +26,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 
 import { useSession } from "@/features/auth/auth-hooks";
 import {
@@ -90,7 +102,7 @@ export function OrganizationCard(props: {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem
-                className=" py-1"
+                className="py-1"
                 onClick={async () => {
                   setActiveOrganization.mutate({
                     organizationId: null,
@@ -101,7 +113,7 @@ export function OrganizationCard(props: {
               </DropdownMenuItem>
               {organizations?.map((org) => (
                 <DropdownMenuItem
-                  className=" py-1"
+                  className="py-1"
                   key={org.id}
                   onClick={async () => {
                     if (org.id === optimisticOrg?.id) {
@@ -141,10 +153,10 @@ export function OrganizationCard(props: {
             <p className="border-b-2 border-b-foreground/10 font-medium">{t("MEMBERS")}</p>
             <div className="flex flex-col gap-2">
               {optimisticOrg?.members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between">
+                <div className="flex items-center justify-between" key={member.id}>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-9 w-9 sm:flex">
-                      <AvatarImage src={member.user.image || ""} className="object-cover" />
+                      <AvatarImage className="object-cover" src={member.user.image || ""} />
                       <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -156,13 +168,13 @@ export function OrganizationCard(props: {
                   </div>
                   {member.role !== "owner" && (currentMember?.role === "owner" || currentMember?.role === "admin") && (
                     <Button
-                      size="sm"
-                      variant="destructive"
                       onClick={() => {
                         removeMember.mutate({
                           userId: member.id,
                         });
                       }}
+                      size="sm"
+                      variant="destructive"
                     >
                       {currentMember?.id === member.id ? t("LEAVE") : t("REMOVE")}
                     </Button>
@@ -193,13 +205,13 @@ export function OrganizationCard(props: {
                   .filter((invitation) => invitation.status === "pending")
                   .map((invitation) => (
                     <motion.div
-                      key={invitation.id}
-                      className="flex items-center justify-between"
-                      variants={inviteVariants}
-                      initial="hidden"
                       animate="visible"
+                      className="flex items-center justify-between"
                       exit="exit"
+                      initial="hidden"
+                      key={invitation.id}
                       layout
+                      variants={inviteVariants}
                     >
                       <div>
                         <p className="text-sm">{invitation.email}</p>
@@ -214,8 +226,6 @@ export function OrganizationCard(props: {
                       <div className="flex items-center gap-2">
                         <Button
                           disabled={isRevoking.includes(invitation.id)}
-                          size="sm"
-                          variant="destructive"
                           onClick={() => {
                             setIsRevoking([...isRevoking, invitation.id]);
                             cancelInvitation.mutate(
@@ -230,15 +240,13 @@ export function OrganizationCard(props: {
                                 onError: () => {
                                   setIsRevoking(isRevoking.filter((id) => id !== invitation.id));
                                 },
-                              },
+                              }
                             );
                           }}
+                          size="sm"
+                          variant="destructive"
                         >
-                          {isRevoking.includes(invitation.id) ? (
-                            <Loader2 className="animate-spin" size={16} />
-                          ) : (
-                            t("REVOKE")
-                          )}
+                          {isRevoking.includes(invitation.id) ? <Spinner size="sm" /> : t("REVOKE")}
                         </Button>
                         <div>
                           <CopyButton textToCopy={`${window.location.origin}/accept-invitation/${invitation.id}`} />
@@ -249,10 +257,10 @@ export function OrganizationCard(props: {
               </AnimatePresence>
               {optimisticOrg?.invitations.length === 0 && (
                 <motion.p
-                  className="text-muted-foreground text-sm"
-                  initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
+                  className="text-muted-foreground text-sm"
                   exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
                 >
                   {t("NO_ACTIVE_INVITATIONS")}
                 </motion.p>
@@ -290,73 +298,44 @@ function CreateOrganizationDialog() {
   const createOrganization = useCreateOrganization();
 
   const form = useForm({
+    resolver: zodResolver(createOrganizationSchema),
     defaultValues: {
       name: "",
       slug: "",
       logo: undefined as File | undefined,
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = createOrganizationSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        let logoBase64: string | undefined;
-        if (value.logo) {
-          logoBase64 = await convertImageToBase64(value.logo);
-        }
-
-        createOrganization.mutate(
-          {
-            name: value.name,
-            slug: value.slug,
-            logo: logoBase64,
-          },
-          {
-            onSuccess: () => {
-              toast.success("Organization created successfully");
-              setOpen(false);
-              form.reset();
-              setLogoPreview(null);
-              setIsSlugEdited(false);
-            },
-            onError: (error) => {
-              toast.error(error.message);
-            },
-          },
-        );
-      } catch (error) {
-        toast.error("An error occurred while creating organization");
-      }
-    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    watch,
+    reset,
+  } = form;
+  const watchName = watch("name");
 
   // Auto-generate slug from name if not manually edited
   useEffect(() => {
-    if (!isSlugEdited && form.state.values.name) {
-      const generatedSlug = form.state.values.name.trim().toLowerCase().replace(/\s+/g, "-");
-      form.setFieldValue("slug", generatedSlug);
+    if (!isSlugEdited && watchName) {
+      const generatedSlug = watchName.trim().toLowerCase().replace(/\s+/g, "-");
+      setValue("slug", generatedSlug);
     }
-  }, [form.state.values.name, isSlugEdited]);
+  }, [watchName, isSlugEdited, setValue]);
 
-  const convertImageToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  const convertImageToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-  };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      form.setFieldValue("logo", file);
+      setValue("logo", file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -366,14 +345,45 @@ function CreateOrganizationDialog() {
   };
 
   const clearLogo = () => {
-    form.setFieldValue("logo", undefined);
+    setValue("logo", undefined);
     setLogoPreview(null);
   };
 
+  const onSubmit = async (data: z.infer<typeof createOrganizationSchema>) => {
+    try {
+      let logoBase64: string | undefined;
+      if (data.logo) {
+        logoBase64 = await convertImageToBase64(data.logo);
+      }
+
+      createOrganization.mutate(
+        {
+          name: data.name,
+          slug: data.slug,
+          logo: logoBase64,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Organization created successfully");
+            setOpen(false);
+            reset();
+            setLogoPreview(null);
+            setIsSlugEdited(false);
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
+        }
+      );
+    } catch (error) {
+      toast.error("An error occurred while creating organization");
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" className="w-full gap-2" variant="default">
+        <Button className="w-full gap-2" size="sm" variant="default">
           <PlusIcon />
           <p>{t("NEW_ORGANIZATION")}</p>
         </Button>
@@ -383,89 +393,68 @@ function CreateOrganizationDialog() {
           <DialogTitle>{t("NEW_ORGANIZATION")}</DialogTitle>
           <DialogDescription>{t("CREATE_ORGANIZATION")}</DialogDescription>
         </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <form.Field
-                name="name"
-                children={(field) => <FormField field={field} label={t("ORGANIZATION_NAME")} placeholder={t("NAME")} />}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <form.Field
-                name="slug"
-                children={(field) => (
-                  <div>
-                    <Label htmlFor={field.name}>{t("ORGANIZATION_SLUG")}</Label>
-                    <Input
-                      className="mt-1"
-                      id={field.name}
-                      name={field.name}
-                      type="text"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => {
-                        field.handleChange(e.target.value);
-                        setIsSlugEdited(true);
-                      }}
-                      placeholder="organization-slug"
-                    />
-                    {field.state.meta.errors && (
-                      <p className="mt-1 text-destructive text-sm">{field.state.meta.errors[0]}</p>
-                    )}
-                  </div>
-                )}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>{t("LOGO")}</Label>
-              <Input type="file" accept="image/*" onChange={handleLogoChange} />
-              {logoPreview && (
-                <div className="mt-2 flex items-center gap-2">
-                  <img
-                    src={logoPreview}
-                    alt="Logo preview"
-                    className="h-16 w-16 rounded object-cover"
-                    width={16}
-                    height={16}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <FieldSet>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="name">{t("ORGANIZATION_NAME")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput id="name" placeholder={t("NAME")} {...register("name")} />
+                </InputGroup>
+                <FieldError errors={errors.name} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="slug">{t("ORGANIZATION_SLUG")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="slug"
+                    placeholder="organization-slug"
+                    {...register("slug", {
+                      onChange: () => setIsSlugEdited(true),
+                    })}
                   />
-                  <button
-                    type="button"
-                    onClick={clearLogo}
-                    className="text-destructive text-sm hover:text-destructive/80"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+                </InputGroup>
+                <FieldError errors={errors.slug} />
+              </Field>
+
+              <Field>
+                <FieldLabel>{t("LOGO")}</FieldLabel>
+                <FieldContent>
+                  <Input accept="image/*" onChange={handleLogoChange} type="file" />
+                  {logoPreview && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img
+                        alt="Logo preview"
+                        className="h-16 w-16 rounded object-cover"
+                        height={16}
+                        src={logoPreview}
+                        width={16}
+                      />
+                      <button
+                        className="text-destructive text-sm hover:text-destructive/80"
+                        onClick={clearLogo}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </FieldContent>
+              </Field>
+            </FieldGroup>
+          </FieldSet>
         </form>
         <DialogFooter>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
-              <Button
-                disabled={!canSubmit || isSubmitting || createOrganization.isPending}
-                onClick={(e) => {
-                  e.preventDefault();
-                  form.handleSubmit();
-                }}
-              >
-                {createOrganization.isPending || isSubmitting ? (
-                  <Loader2 className="animate-spin" size={16} />
-                ) : (
-                  t("CREATE")
-                )}
-              </Button>
-            )}
-          />
+          <ButtonGroup>
+            <Button
+              disabled={isSubmitting || createOrganization.isPending}
+              onClick={handleSubmit(onSubmit)}
+              type="submit"
+            >
+              {createOrganization.isPending || isSubmitting ? <Spinner size="sm" /> : t("CREATE")}
+            </Button>
+          </ButtonGroup>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -475,7 +464,7 @@ function CreateOrganizationDialog() {
 const inviteMemberSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   role: z.enum(["admin", "member"], {
-    required_error: "Please select a role",
+    message: "Please select a role",
   }),
 });
 
@@ -485,42 +474,42 @@ function InviteMemberDialog() {
   const inviteMember = useInviteMember();
 
   const form = useForm({
+    resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
       email: "",
       role: "member" as "admin" | "member",
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = inviteMemberSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      inviteMember.mutate(
-        {
-          email: value.email,
-          role: value.role,
-        },
-        {
-          onSuccess: () => {
-            toast.success("Member invited successfully");
-            form.reset();
-            setOpen(false);
-          },
-          onError: (error) => {
-            toast.error(error.message);
-          },
-        },
-      );
-    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = form;
+
+  const onSubmit = async (data: z.infer<typeof inviteMemberSchema>) => {
+    inviteMember.mutate(
+      {
+        email: data.email,
+        role: data.role,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Member invited successfully");
+          reset();
+          setOpen(false);
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      }
+    );
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" className="w-full gap-2" variant="secondary">
+        <Button className="w-full gap-2" size="sm" variant="secondary">
           <MailPlus size={16} />
           <p>{t("INVITE_MEMBER")}</p>
         </Button>
@@ -530,30 +519,23 @@ function InviteMemberDialog() {
           <DialogTitle>{t("INVITE_MEMBER")}</DialogTitle>
           <DialogDescription>{t("INVITE_MEMBER_DESC")}</DialogDescription>
         </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <form.Field
-                name="email"
-                children={(field) => (
-                  <FormField field={field} label={t("EMAIL")} type="email" placeholder={t("EMAIL")} />
-                )}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>{t("ROLE")}</Label>
-              <form.Field
-                name="role"
-                children={(field) => (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <FieldSet>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="email">{t("EMAIL")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput id="email" placeholder={t("EMAIL")} type="email" {...register("email")} />
+                </InputGroup>
+                <FieldError errors={errors.email} />
+              </Field>
+
+              <Field>
+                <FieldLabel>{t("ROLE")}</FieldLabel>
+                <FieldContent>
                   <Select
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value as "admin" | "member")}
+                    onValueChange={(value) => form.setValue("role", value as "admin" | "member")}
+                    value={form.watch("role")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={`${t("SELECT_USER")}`} />
@@ -563,32 +545,17 @@ function InviteMemberDialog() {
                       <SelectItem value="member">{t("MEMBER")}</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-              />
-            </div>
-          </div>
+                </FieldContent>
+              </Field>
+            </FieldGroup>
+          </FieldSet>
         </form>
         <DialogFooter>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
-              <DialogClose asChild>
-                <Button
-                  disabled={!canSubmit || isSubmitting || inviteMember.isPending}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    form.handleSubmit();
-                  }}
-                >
-                  {inviteMember.isPending || isSubmitting ? (
-                    <Loader2 className="animate-spin" size={16} />
-                  ) : (
-                    t("INVITE")
-                  )}
-                </Button>
-              </DialogClose>
-            )}
-          />
+          <ButtonGroup>
+            <Button disabled={isSubmitting || inviteMember.isPending} onClick={handleSubmit(onSubmit)} type="submit">
+              {inviteMember.isPending || isSubmitting ? <Spinner size="sm" /> : t("INVITE")}
+            </Button>
+          </ButtonGroup>
         </DialogFooter>
       </DialogContent>
     </Dialog>

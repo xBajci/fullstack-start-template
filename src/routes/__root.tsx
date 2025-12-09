@@ -1,9 +1,11 @@
 import { wrapCreateRootRouteWithSentry } from "@sentry/tanstackstart-react";
+import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { ThemeProvider } from "next-themes";
-import React from "react";
 import { I18nextProvider } from "react-i18next";
 import { Toaster } from "@/components/ui/sonner";
 import i18n from "@/lib/intl/i18n";
@@ -15,15 +17,6 @@ interface MyRouterContext {
   queryClient: QueryClient;
   trpc: TRPCOptionsProxy<TRPCRouter>;
 }
-
-const TanStackRouterDevtools =
-  process.env.NODE_ENV === "production"
-    ? () => null
-    : React.lazy(() =>
-        import("@tanstack/react-router-devtools").then((res) => ({
-          default: res.TanStackRouterDevtools,
-        })),
-      );
 
 export const Route = wrapCreateRootRouteWithSentry(
   createRootRouteWithContext<MyRouterContext>()({
@@ -53,7 +46,7 @@ export const Route = wrapCreateRootRouteWithSentry(
     }),
     component: () => <RootDocument />,
     wrapInSuspense: true,
-  }),
+  })
 );
 
 function RootDocument() {
@@ -63,11 +56,37 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <I18nextProvider i18n={i18n} defaultNS={"translation"}>
+        <ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange enableSystem>
+          <I18nextProvider defaultNS={"translation"} i18n={i18n}>
             <Outlet />
             <Toaster />
-            <TanStackRouterDevtools />
+            <TanStackDevtools
+              config={{ defaultOpen: false }}
+              plugins={[
+                {
+                  name: "Tanstack Query",
+                  render: <ReactQueryDevtoolsPanel />,
+                },
+                {
+                  name: "Tanstack Router",
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+                {
+                  name: "Drizzle Studio",
+                  render: () => (
+                    <iframe
+                      src="https://local.drizzle.studio"
+                      style={{
+                        flexGrow: 1,
+                        width: "100%",
+                        height: "100%",
+                        border: 0,
+                      }}
+                    />
+                  ),
+                },
+              ]}
+            />
             <Scripts />
           </I18nextProvider>
         </ThemeProvider>

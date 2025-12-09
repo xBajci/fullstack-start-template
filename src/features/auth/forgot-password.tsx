@@ -1,12 +1,17 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { FormField } from "@/components/form/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldContent, FieldError, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuthHelpers } from "@/features/auth/auth-hooks";
 import { useTranslation } from "@/lib/intl/react";
 
@@ -20,27 +25,26 @@ export default function ForgotPasswordForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const form = useForm({
+    resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = forgotPasswordSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        await forgotPassword.mutateAsync({ email: value.email });
-        setIsSubmitted(true);
-      } catch (err) {
-        // Error handling is done via form validation
-      }
-    },
   });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const onSubmit = async (data: z.infer<typeof forgotPasswordSchema>) => {
+    try {
+      await forgotPassword.mutateAsync({ email: data.email });
+      setIsSubmitted(true);
+    } catch (err) {
+      // Error handling is done via form validation
+    }
+  };
 
   if (isSubmitted) {
     return (
@@ -57,7 +61,7 @@ export default function ForgotPasswordForm() {
             </Alert>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full" onClick={() => setIsSubmitted(false)}>
+            <Button className="w-full" onClick={() => setIsSubmitted(false)} variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" /> {t("BACK_TO_RESET")}
             </Button>
           </CardFooter>
@@ -74,36 +78,26 @@ export default function ForgotPasswordForm() {
           <CardDescription>{t("FORGOT_PASSWORD_DESC")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <div className="grid w-full items-center gap-4">
-              <div className="flex flex-col space-y-1.5">
-                <form.Field
-                  name="email"
-                  children={(field) => (
-                    <FormField field={field} label={t("EMAIL")} type="email" placeholder={t("ENTER_EMAIL")} />
-                  )}
-                />
-              </div>
-            </div>
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
-                <Button className="mt-4 w-full" type="submit" disabled={!canSubmit || isSubmitting}>
-                  {isSubmitting ? t("SENDING") : t("SEND_RESET_LINK")}
-                </Button>
-              )}
-            />
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <FieldSet>
+              <Field>
+                <FieldLabel htmlFor="email">{t("EMAIL")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput id="email" placeholder={t("ENTER_EMAIL")} type="email" {...register("email")} />
+                </InputGroup>
+                <FieldError errors={errors.email} />
+              </Field>
+            </FieldSet>
+            <ButtonGroup>
+              <Button className="mt-4 w-full" disabled={isSubmitting} type="submit">
+                {isSubmitting ? <Spinner size="sm" /> : t("SEND_RESET_LINK")}
+              </Button>
+            </ButtonGroup>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <Link to="/login">
-            <Button variant="link" className="px-0">
+            <Button className="px-0" variant="link">
               {t("BACK_TO_SIGN_IN")}
             </Button>
           </Link>

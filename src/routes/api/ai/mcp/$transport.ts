@@ -1,4 +1,5 @@
-import { createServerFileRoute } from "@tanstack/react-start/server";
+import { createFileRoute } from "@tanstack/react-router";
+
 import { createMcpHandler } from "@vercel/mcp-adapter";
 import { tools } from "@/features/ai/mcp-tools";
 import { auth } from "@/lib/auth/auth";
@@ -36,7 +37,7 @@ const handler = async (req: Request) => {
               };
               return acc;
             },
-            {} as Record<string, { description: string }>,
+            {} as Record<string, { description: string }>
           ),
         },
       },
@@ -48,24 +49,16 @@ const handler = async (req: Request) => {
       onEvent(event) {
         console.log("🔑 Event", event);
       },
-    },
+    }
   )(req);
 };
 
-export const ServerRoute = createServerFileRoute("/api/ai/mcp/$transport").methods({
-  POST: async ({ request }) => {
-    return handler(request);
-  },
-  GET: async ({ request }) => {
-    return handler(request);
-  },
-  DELETE: async ({ request }) => {
-    return handler(request);
+export const Route = createFileRoute("/api/ai/mcp/$transport")({
+  server: {
+    handlers: {
+      POST: async ({ request }) => handler(request),
+      GET: async ({ request }) => handler(request),
+      DELETE: async ({ request }) => handler(request),
+    },
   },
 });
-
-// usage in Cursor:
-// "remote-example": {
-//     "command": "npx",
-//     "args": ["mcp-remote", "http://localhost:3000/api/ai/mcp/mcp"]
-//   }

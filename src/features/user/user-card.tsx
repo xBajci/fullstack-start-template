@@ -1,19 +1,19 @@
-import { useForm } from "@tanstack/react-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "@tanstack/react-router";
-import { Laptop, Loader2, LogOut, PhoneIcon, QrCode, ShieldCheck, ShieldOff } from "lucide-react";
+import { Laptop, LogOut, PhoneIcon, QrCode, ShieldCheck, ShieldOff } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
 import { UAParser } from "ua-parser-js";
 import * as z from "zod";
 import CopyButton from "@/components/copy-button";
-import { FormField } from "@/components/form/form-field";
-import { PasswordField } from "@/components/form/password-field";
 import { LanguageSwitch } from "@/components/language-switch";
 import { AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -24,7 +24,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { AddPasskey } from "@/features/auth/add-passkey";
 import { useAuthHelpers, useLogout } from "@/features/auth/auth-hooks";
 import { ChangePassword } from "@/features/auth/change-password";
@@ -66,110 +78,109 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
 
   // Form for QR code password verification
   const qrCodeForm = useForm({
+    resolver: zodResolver(qrCodePasswordSchema),
     defaultValues: {
       password: "",
     },
-    validators: {
-      onChange: ({ value }) => {
-        const result = qrCodePasswordSchema.safeParse(value);
-        if (!result.success) {
-          return result.error.formErrors.fieldErrors;
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      getTotpUri.mutate(
-        { password: value.password },
-        {
-          onSuccess: (data) => {
-            setTwoFactorVerifyURI(data.data?.totpURI || "");
-            qrCodeForm.setFieldValue("password", "");
-          },
-          onError: (error) => {
-            toast.error(error.message);
-          },
-        },
-      );
-    },
   });
+
+  const {
+    register: registerQrCode,
+    handleSubmit: handleSubmitQrCode,
+    formState: { errors: qrCodeErrors, isSubmitting: isSubmittingQrCode },
+    reset: resetQrCode,
+  } = qrCodeForm;
+
+  const onSubmitQrCode = async (data: z.infer<typeof qrCodePasswordSchema>) => {
+    getTotpUri.mutate(
+      { password: data.password },
+      {
+        onSuccess: (data) => {
+          setTwoFactorVerifyURI(data.data?.totpURI || "");
+          resetQrCode();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      }
+    );
+  };
 
   // Form for two-factor enable/disable
   const twoFactorForm = useForm({
+    resolver: (data) => {
+      if (twoFactorVerifyURI) {
+        // When showing OTP input
+        return zodResolver(twoFactorOtpSchema)(data);
+      }
+      // When showing password input
+      return zodResolver(twoFactorPasswordSchema)(data);
+    },
     defaultValues: {
       password: "",
       otp: "",
     },
-    validators: {
-      onChange: ({ value }) => {
-        if (twoFactorVerifyURI) {
-          // When showing OTP input
-          const result = twoFactorOtpSchema.safeParse({ otp: value.otp });
-          if (!result.success) {
-            return result.error.formErrors.fieldErrors;
-          }
-        } else {
-          // When showing password input
-          const result = twoFactorPasswordSchema.safeParse({ password: value.password });
-          if (!result.success) {
-            return result.error.formErrors.fieldErrors;
-          }
-        }
-        return undefined;
-      },
-    },
-    onSubmit: async ({ value }) => {
-      if (session?.user.twoFactorEnabled) {
-        // Disable 2FA
-        disableTwoFactor.mutate(
-          { password: value.password },
-          {
-            onSuccess: () => {
-              toast("2FA disabled successfully");
-              setTwoFactorDialog(false);
-              twoFactorForm.setFieldValue("password", "");
-            },
-            onError: (error) => {
-              toast.error(error.message);
-            },
-          },
-        );
-      } else {
-        if (twoFactorVerifyURI) {
-          // Verify OTP to enable 2FA
-          verifyTotpForEnable.mutate(
-            { code: value.otp },
-            {
-              onSuccess: () => {
-                toast("2FA enabled successfully");
-                setTwoFactorVerifyURI("");
-                twoFactorForm.setFieldValue("otp", "");
-                twoFactorForm.setFieldValue("password", "");
-                setTwoFactorDialog(false);
-              },
-              onError: (error) => {
-                twoFactorForm.setFieldValue("otp", "");
-                toast.error(error.message);
-              },
-            },
-          );
-        } else {
-          // Enable 2FA - get TOTP URI
-          enableTwoFactor.mutate(
-            { password: value.password },
-            {
-              onSuccess: (data) => {
-                setTwoFactorVerifyURI(data.data?.totpURI || "");
-              },
-              onError: (error) => {
-                toast.error(error.message);
-              },
-            },
-          );
-        }
-      }
-    },
   });
+
+  const {
+    register: registerTwoFactor,
+    handleSubmit: handleSubmitTwoFactor,
+    formState: { errors: twoFactorErrors, isSubmitting: isSubmittingTwoFactor },
+    setValue,
+    reset: resetTwoFactor,
+    watch,
+  } = twoFactorForm;
+  const watchOtp = watch("otp");
+  const watchPassword = watch("password");
+
+  const onSubmitTwoFactor = async (data: any) => {
+    if (session?.user.twoFactorEnabled) {
+      // Disable 2FA
+      disableTwoFactor.mutate(
+        { password: data.password },
+        {
+          onSuccess: () => {
+            toast("2FA disabled successfully");
+            setTwoFactorDialog(false);
+            resetTwoFactor();
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
+        }
+      );
+    } else if (twoFactorVerifyURI) {
+      // Verify OTP to enable 2FA
+      verifyTotpForEnable.mutate(
+        { code: data.otp },
+        {
+          onSuccess: () => {
+            toast("2FA enabled successfully");
+            setTwoFactorVerifyURI("");
+            resetTwoFactor();
+            setTwoFactorDialog(false);
+          },
+          onError: (error) => {
+            setValue("otp", "");
+            toast.error(error.message);
+          },
+        }
+      );
+    } else {
+      // Enable 2FA - get TOTP URI
+      enableTwoFactor.mutate(
+        { password: data.password },
+        {
+          onSuccess: (data) => {
+            setTwoFactorVerifyURI(data.data?.totpURI || "");
+          },
+          onError: (error) => {
+            toast.error(error.message);
+          },
+        }
+      );
+    }
+  };
 
   const handleSendVerificationEmail = async () => {
     sendVerificationEmail.mutate(
@@ -183,7 +194,7 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
         onSuccess() {
           toast.success("Verification email sent successfully");
         },
-      },
+      }
     );
   };
 
@@ -217,8 +228,8 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
       <CardContent className="flex flex-col gap-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <Avatar className="hidden h-9 w-9 sm:flex ">
-              <AvatarImage src={session?.user.image || "#"} alt="Avatar" className="object-cover" />
+            <Avatar className="hidden h-9 w-9 sm:flex">
+              <AvatarImage alt="Avatar" className="object-cover" src={session?.user.image || "#"} />
               <AvatarFallback>{session?.user.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="grid gap-1">
@@ -234,49 +245,43 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
             <div className="flex flex-col gap-2">
               <AlertTitle>{t("VERIFY_EMAIL")}</AlertTitle>
               <AlertDescription className="text-muted-foreground">{t("VERIFY_EMAIL_DESC")}</AlertDescription>
-              <Button size="sm" variant="secondary" className="mt-2" onClick={handleSendVerificationEmail}>
-                {sendVerificationEmail.isPending ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  t("RESEND_VERIFICATION")
-                )}
+              <Button className="mt-2" onClick={handleSendVerificationEmail} size="sm" variant="secondary">
+                {sendVerificationEmail.isPending ? <Spinner size="sm" /> : t("RESEND_VERIFICATION")}
               </Button>
             </div>
           </div>
         )}
 
         <div className="flex w-max flex-col gap-1 border-l-2 px-2">
-          <p className="font-medium text-xs ">{t("ACTIVE_SESSIONS")}</p>
+          <p className="font-medium text-xs">{t("ACTIVE_SESSIONS")}</p>
           {props?.activeSessions
             ?.filter((item) => item.userAgent)
-            .map((item) => {
-              return (
-                <div key={item.id}>
-                  <div className="flex items-center gap-2 font-medium text-black text-sm dark:text-white">
-                    {new UAParser(item.userAgent || "").getDevice().type === "mobile" ? (
-                      <PhoneIcon />
+            .map((item) => (
+              <div key={item.id}>
+                <div className="flex items-center gap-2 font-medium text-black text-sm dark:text-white">
+                  {new UAParser(item.userAgent || "").getDevice().type === "mobile" ? (
+                    <PhoneIcon />
+                  ) : (
+                    <Laptop size={16} />
+                  )}
+                  {new UAParser(item.userAgent || "").getOS().name},{" "}
+                  {new UAParser(item.userAgent || "").getBrowser().name}
+                  <Button
+                    className="min-w-[100px] cursor-pointer"
+                    onClick={() => handleRevokeSession(item)}
+                    variant="outline"
+                  >
+                    {isTerminating === item.id ? (
+                      <Spinner size="sm" />
+                    ) : item.id === session?.session?.id ? (
+                      t("SIGN_OUT")
                     ) : (
-                      <Laptop size={16} />
+                      t("TERMINATE")
                     )}
-                    {new UAParser(item.userAgent || "").getOS().name},{" "}
-                    {new UAParser(item.userAgent || "").getBrowser().name}
-                    <Button
-                      variant="outline"
-                      className="min-w-[100px] cursor-pointer"
-                      onClick={() => handleRevokeSession(item)}
-                    >
-                      {isTerminating === item.id ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : item.id === session?.session?.id ? (
-                        t("SIGN_OUT")
-                      ) : (
-                        t("TERMINATE")
-                      )}
-                    </Button>
-                  </div>
+                  </Button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-y py-4">
           <div className="flex flex-col gap-2">
@@ -292,7 +297,7 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
               {!!session?.user.twoFactorEnabled && (
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="gap-2">
+                    <Button className="gap-2" variant="outline">
                       <QrCode size={16} />
                       <span className="text-xs md:text-sm">{t("SCAN_QR_CODE")}</span>
                     </Button>
@@ -314,41 +319,36 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
                         </div>
                       </>
                     ) : (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          qrCodeForm.handleSubmit();
-                        }}
-                      >
-                        <div className="flex flex-col gap-2">
-                          <qrCodeForm.Field
-                            name="password"
-                            children={(field) => (
-                              <PasswordField field={field} label="" placeholder={t("ENTER_PASSWORD")} />
-                            )}
-                          />
-                          <qrCodeForm.Subscribe
-                            selector={(state) => [state.canSubmit, state.isSubmitting]}
-                            children={([canSubmit, isSubmitting]) => {
-                              const isLoading = isSubmitting || getTotpUri.isPending;
-
-                              return (
-                                <Button type="submit" disabled={!canSubmit || isLoading}>
-                                  {isLoading ? <Loader2 size={15} className="animate-spin" /> : t("SHOW_QR_CODE")}
-                                </Button>
-                              );
-                            }}
-                          />
-                        </div>
+                      <form onSubmit={handleSubmitQrCode(onSubmitQrCode)}>
+                        <FieldSet>
+                          <FieldGroup>
+                            <Field>
+                              <FieldLabel htmlFor="qr-password">{t("ENTER_PASSWORD")}</FieldLabel>
+                              <InputGroup>
+                                <InputGroupInput
+                                  id="qr-password"
+                                  placeholder={t("ENTER_PASSWORD")}
+                                  type="password"
+                                  {...registerQrCode("password")}
+                                />
+                              </InputGroup>
+                              <FieldError errors={qrCodeErrors.password} />
+                            </Field>
+                          </FieldGroup>
+                        </FieldSet>
+                        <ButtonGroup>
+                          <Button disabled={isSubmittingQrCode || getTotpUri.isPending} type="submit">
+                            {isSubmittingQrCode || getTotpUri.isPending ? <Spinner size="sm" /> : t("SHOW_QR_CODE")}
+                          </Button>
+                        </ButtonGroup>
                       </form>
                     )}
                   </DialogContent>
                 </Dialog>
               )}
-              <Dialog open={twoFactorDialog} onOpenChange={setTwoFactorDialog}>
+              <Dialog onOpenChange={setTwoFactorDialog} open={twoFactorDialog}>
                 <DialogTrigger asChild>
-                  <Button variant={session?.user.twoFactorEnabled ? "destructive" : "outline"} className="gap-2">
+                  <Button className="gap-2" variant={session?.user.twoFactorEnabled ? "destructive" : "outline"}>
                     {session?.user.twoFactorEnabled ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
                     <span className="text-xs md:text-sm">
                       {session?.user.twoFactorEnabled ? t("DISABLE_2FA") : t("ENABLE_2FA")}
@@ -363,57 +363,62 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
                     </DialogDescription>
                   </DialogHeader>
 
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      twoFactorForm.handleSubmit();
-                    }}
-                  >
-                    {twoFactorVerifyURI ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-center">
-                          <QRCode value={twoFactorVerifyURI} />
-                        </div>
-                        <Label>{t("SCAN_QR_DESC")}</Label>
-                        <twoFactorForm.Field
-                          name="otp"
-                          children={(field) => <FormField field={field} label="" placeholder={t("ENTER_OTP")} />}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <twoFactorForm.Field
-                          name="password"
-                          children={(field) => (
-                            <PasswordField field={field} label={t("PASSWORD")} placeholder={t("PASSWORD")} />
-                          )}
-                        />
-                      </div>
-                    )}
+                  <form onSubmit={handleSubmitTwoFactor(onSubmitTwoFactor)}>
+                    <FieldSet>
+                      <FieldGroup>
+                        {twoFactorVerifyURI ? (
+                          <>
+                            <div className="flex items-center justify-center">
+                              <QRCode value={twoFactorVerifyURI} />
+                            </div>
+                            <FieldDescription>{t("SCAN_QR_DESC")}</FieldDescription>
+                            <Field>
+                              <FieldLabel htmlFor="otp">{t("ENTER_OTP")}</FieldLabel>
+                              <InputGroup>
+                                <InputGroupInput id="otp" placeholder={t("ENTER_OTP")} {...registerTwoFactor("otp")} />
+                              </InputGroup>
+                              <FieldError errors={twoFactorErrors.otp} />
+                            </Field>
+                          </>
+                        ) : (
+                          <Field>
+                            <FieldLabel htmlFor="two-factor-password">{t("PASSWORD")}</FieldLabel>
+                            <InputGroup>
+                              <InputGroupInput
+                                id="two-factor-password"
+                                placeholder={t("PASSWORD")}
+                                type="password"
+                                {...registerTwoFactor("password")}
+                              />
+                            </InputGroup>
+                            <FieldError errors={twoFactorErrors.password} />
+                          </Field>
+                        )}
+                      </FieldGroup>
+                    </FieldSet>
                     <DialogFooter>
-                      <twoFactorForm.Subscribe
-                        selector={(state) => [state.canSubmit, state.isSubmitting]}
-                        children={([canSubmit, isSubmitting]) => {
-                          const isLoading =
-                            isSubmitting ||
+                      <ButtonGroup>
+                        <Button
+                          disabled={
+                            isSubmittingTwoFactor ||
                             disableTwoFactor.isPending ||
                             enableTwoFactor.isPending ||
-                            verifyTotpForEnable.isPending;
-
-                          return (
-                            <Button type="submit" disabled={!canSubmit || isLoading}>
-                              {isLoading ? (
-                                <Loader2 size={15} className="animate-spin" />
-                              ) : session?.user.twoFactorEnabled ? (
-                                t("DISABLE_2FA")
-                              ) : (
-                                t("ENABLE_2FA")
-                              )}
-                            </Button>
-                          );
-                        }}
-                      />
+                            verifyTotpForEnable.isPending
+                          }
+                          type="submit"
+                        >
+                          {isSubmittingTwoFactor ||
+                          disableTwoFactor.isPending ||
+                          enableTwoFactor.isPending ||
+                          verifyTotpForEnable.isPending ? (
+                            <Spinner size="sm" />
+                          ) : session?.user.twoFactorEnabled ? (
+                            t("DISABLE_2FA")
+                          ) : (
+                            t("ENABLE_2FA")
+                          )}
+                        </Button>
+                      </ButtonGroup>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -426,7 +431,7 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
         <ChangePassword />
         <Button
           className="z-10 gap-2"
-          variant="secondary"
+          disabled={logout.isPending}
           onClick={async () => {
             // setIsSignOut(true);
             // await authClient.signOut({
@@ -439,11 +444,11 @@ export default function UserCard(props: { activeSessions: AuthClient["$Infer"]["
             // setIsSignOut(false);
             logout.mutate();
           }}
-          disabled={logout.isPending}
+          variant="secondary"
         >
           <span className="text-sm">
             {logout.isPending ? (
-              <Loader2 size={15} className="animate-spin" />
+              <Spinner size="sm" />
             ) : (
               <div className="flex items-center gap-2">
                 <LogOut size={16} />
